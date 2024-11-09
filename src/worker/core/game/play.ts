@@ -114,7 +114,7 @@ const play = async (
 		const gidsFinished = await Promise.all(
 			results.map(async result => {
 				const att = await writeTeamStats(result);
-				await writeGameStats(result, att, conditions);
+				await writeGameStats(result, att, conditions, result.stints);
 				return result.gid;
 			}),
 		);

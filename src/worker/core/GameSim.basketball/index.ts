@@ -93,7 +93,15 @@ type TeamGameSim = {
 		reb: number;
 	};
 };
-
+interface CurrentStint {
+	offensePlayerIds: number[];
+	defensePlayerIds: number[];
+	startPtsOffense: number;
+	startPtsDefense: number;
+	possessions: number;
+	offenseTeamIndex: number;
+	defenseTeamIndex: number;
+}
 type PossessionOutcome =
 	| "tov"
 	| "stl"
@@ -209,13 +217,14 @@ class GameSim extends GameSimBase {
 		type: ShotType;
 		time: number;
 	}[];
-
 	clutchPlays: {
 		text: string;
 		showNotification: boolean;
 		pids: [number];
 		tids: [number];
 	}[];
+	// Initialize current stint data
+	private currentStint: CurrentStint;
 
 	o: TeamNum;
 
@@ -329,6 +338,16 @@ class GameSim extends GameSimBase {
 
 		this.o = 0;
 		this.d = 1;
+
+		this.currentStint = {
+			offensePlayerIds: [],
+			defensePlayerIds: [],
+			offenseTeamIndex: 0,
+			defenseTeamIndex: 0,
+			startPtsOffense: 0,
+			startPtsDefense: 0,
+			possessions: 0,
+		};
 	}
 
 	/**
@@ -394,6 +413,89 @@ class GameSim extends GameSimBase {
 	 *         ]
 	 *     }
 	 */
+	// Function to end and log the current stint
+	// Function to end and log the current stint
+	public stints: {
+		gameId: number;
+		offensePlayerIds: number[];
+		defensePlayerIds: number[];
+		pointDifferential: number;
+		possessions: number;
+	}[] = [];
+	private logCurrentStint() {
+		if (this.currentStint.possessions > 0) {
+			const offenseTeam = this.currentStint.offenseTeamIndex;
+			const defenseTeam = this.currentStint.defenseTeamIndex;
+
+			// Calculate the point differential for the stint
+			const pointDifferential =
+				this.team[offenseTeam].stat.pts -
+				this.currentStint.startPtsOffense -
+				(this.team[defenseTeam].stat.pts - this.currentStint.startPtsDefense);
+
+			// Prepare the data to log
+			const stintData = {
+				gameId: this.id,
+				offensePlayerIds: this.currentStint.offensePlayerIds,
+				defensePlayerIds: this.currentStint.defensePlayerIds,
+				pointDifferential: pointDifferential,
+				possessions: this.currentStint.possessions,
+			};
+
+			// Add to the stints array
+			this.stints.push(stintData);
+
+			// Reset current stint data
+			this.currentStint = {
+				offensePlayerIds: [],
+				defensePlayerIds: [],
+				offenseTeamIndex: 0,
+				defenseTeamIndex: 0,
+				startPtsOffense: 0,
+				startPtsDefense: 0,
+				possessions: 0,
+			};
+		}
+	}
+
+	// Function called at the end of each possession
+	private onPossessionEnd() {
+		// Get the current lineups
+		const offenseLineup = this.playersOnCourt[this.o].map(
+			p => this.team[this.o].player[p].id,
+		);
+		const defenseLineup = this.playersOnCourt[this.d].map(
+			p => this.team[this.d].player[p].id,
+		);
+
+		// Check if the lineup has changed
+		if (
+			!this.arraysEqual(this.currentStint.offensePlayerIds, offenseLineup) ||
+			!this.arraysEqual(this.currentStint.defensePlayerIds, defenseLineup)
+		) {
+			// Before starting a new stint, calculate and store the point differential for the current stint
+			this.logCurrentStint();
+
+			// Start a new current stint with new lineups
+			this.currentStint = {
+				offensePlayerIds: [...offenseLineup],
+				defensePlayerIds: [...defenseLineup],
+				offenseTeamIndex: this.o,
+				defenseTeamIndex: this.d,
+				startPtsOffense: this.team[this.o].stat.pts,
+				startPtsDefense: this.team[this.d].stat.pts,
+				possessions: 0,
+			};
+		}
+
+		// Update current stint data
+		this.currentStint.possessions += 1;
+	}
+
+	// Helper function to compare arrays
+	private arraysEqual(a: number[], b: number[]): boolean {
+		return a.length === b.length && a.every((val, index) => val === b[index]);
+	}
 	run() {
 		// Simulate the game up to the end of regulation
 		this.simRegulation();
@@ -449,8 +551,11 @@ class GameSim extends GameSimBase {
 			playByPlay: this.playByPlay.getPlayByPlay(this.team),
 			numPlayersOnCourt: this.numPlayersOnCourt,
 			neutralSite: this.neutralSite,
+			stints: this.stints,
 			// scoringSummary: this.playByPlay.scoringSummary,
 		};
+		// Log the final stint before returning
+		this.logCurrentStint();
 
 		return out;
 	}
@@ -866,6 +971,8 @@ class GameSim extends GameSimBase {
 				type: "afterPossession",
 				injuries,
 			});
+			// Call onPossessionEnd after the possession ends
+			this.onPossessionEnd();
 		}
 	}
 

@@ -358,6 +358,7 @@ const writeGameStats = async (
 	results: GameResults,
 	att: number,
 	conditions: Conditions,
+	stints: any[],
 ) => {
 	const {
 		allStarGame,
@@ -456,7 +457,16 @@ const writeGameStats = async (
 			);
 		}
 	}
+	if (stints.length > 0) {
+		const transaction = idb.league.transaction("lineupData", "readwrite");
+		const store = transaction.objectStore("lineupData");
 
+		for (const stintData of stints) {
+			await store.add(stintData);
+		}
+
+		await transaction.done;
+	}
 	// Save finals and semifinals, for news feed
 	const numPlayoffRounds = g.get("numGamesPlayoffSeries", "current").length;
 	const playoffsByConf = await season.getPlayoffsByConf(g.get("season"));
