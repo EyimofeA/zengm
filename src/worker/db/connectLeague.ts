@@ -152,6 +152,22 @@ export interface LeagueDB extends DBSchema {
 			season: number;
 		};
 	};
+	lineupData: {
+		key: number;
+		value: {
+			id: number;
+			gameId: number;
+			offensePlayerIds: number[]; // Array of 5 offensive player IDs
+			defensePlayerIds: number[]; // Array of 5 defensive player IDs
+			pointDifferential: number;
+			possessions: number;
+		};
+		autoIncrementKeyPath: "id";
+		indexes: {
+			gameId: number;
+		};
+	};
+
 	seasonLeaders: {
 		key: number;
 		value: SeasonLeaders;
@@ -431,6 +447,11 @@ const create = (db: IDBPDatabase<LeagueDB>) => {
 		keyPath: "dpid",
 		autoIncrement: true,
 	});
+	const lineupDataStore = db.createObjectStore("lineupData", {
+		keyPath: "id",
+		autoIncrement: true,
+	});
+	lineupDataStore.createIndex("gameId", "gameId", { unique: false });
 	const eventStore = db.createObjectStore("events", {
 		keyPath: "eid",
 		autoIncrement: true,
@@ -1492,6 +1513,16 @@ const migrate = async ({
 		db.createObjectStore("savedTradingBlock", {
 			keyPath: "rid",
 		});
+	}
+	if (oldVersion <= 62) {
+		// Replace <LATEST_VERSION> with the appropriate version number
+		if (!db.objectStoreNames.contains("lineupData")) {
+			const lineupDataStore = db.createObjectStore("lineupData", {
+				keyPath: "id",
+				autoIncrement: true,
+			});
+			lineupDataStore.createIndex("gameId", "gameId", { unique: false });
+		}
 	}
 };
 
