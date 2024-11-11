@@ -94,14 +94,14 @@ type TeamGameSim = {
 	};
 };
 interface CurrentStint {
-	offensePlayerIds: number[];
-	defensePlayerIds: number[];
-	startPtsOffense: number;
-	startPtsDefense: number;
+	homePlayerIds: number[];
+	awayPlayerIds: number[];
+	startPtsHome: number;
+	startPtsAway: number;
 	possessions: number;
-	offenseTeamIndex: number;
-	defenseTeamIndex: number;
+	season: number;
 }
+
 type PossessionOutcome =
 	| "tov"
 	| "stl"
@@ -339,14 +339,18 @@ class GameSim extends GameSimBase {
 		this.o = 0;
 		this.d = 1;
 
+		// Initialize current stint
 		this.currentStint = {
-			offensePlayerIds: [],
-			defensePlayerIds: [],
-			offenseTeamIndex: 0,
-			defenseTeamIndex: 0,
-			startPtsOffense: 0,
-			startPtsDefense: 0,
+			homePlayerIds: this.playersOnCourt[0]
+				.map(p => this.team[0].player[p].id)
+				.sort((a, b) => a - b),
+			awayPlayerIds: this.playersOnCourt[1]
+				.map(p => this.team[1].player[p].id)
+				.sort((a, b) => a - b),
+			startPtsHome: this.team[0].stat.pts,
+			startPtsAway: this.team[1].stat.pts,
 			possessions: 0,
+			season: g.get("season"), // Include the season
 		};
 	}
 
@@ -415,87 +419,74 @@ class GameSim extends GameSimBase {
 	 */
 	// Function to end and log the current stint
 	// Function to end and log the current stint
+	// Remove gameId from the stints array
 	public stints: {
-		gameId: number;
-		offensePlayerIds: number[];
-		defensePlayerIds: number[];
+		homePlayerIds: number[];
+		awayPlayerIds: number[];
 		pointDifferential: number;
 		possessions: number;
 	}[] = [];
+
 	private logCurrentStint() {
 		if (this.currentStint.possessions > 0) {
-			const offenseTeam = this.currentStint.offenseTeamIndex;
-			const defenseTeam = this.currentStint.defenseTeamIndex;
-
 			// Calculate the point differential for the stint
 			const pointDifferential =
-				this.team[offenseTeam].stat.pts -
-				this.currentStint.startPtsOffense -
-				(this.team[defenseTeam].stat.pts - this.currentStint.startPtsDefense);
+				this.team[0].stat.pts -
+				this.currentStint.startPtsHome -
+				(this.team[1].stat.pts - this.currentStint.startPtsAway);
 
 			// Prepare the data to log
 			const stintData = {
-				gameId: this.id,
-				offensePlayerIds: this.currentStint.offensePlayerIds,
-				defensePlayerIds: this.currentStint.defensePlayerIds,
-				pointDifferential: pointDifferential,
+				homePlayerIds: this.currentStint.homePlayerIds,
+				awayPlayerIds: this.currentStint.awayPlayerIds,
+				pointDifferential,
 				possessions: this.currentStint.possessions,
+				season: g.get("season"), // Include the season
 			};
 
 			// Add to the stints array
 			this.stints.push(stintData);
-
-			// Reset current stint data
-			this.currentStint = {
-				offensePlayerIds: [],
-				defensePlayerIds: [],
-				offenseTeamIndex: 0,
-				defenseTeamIndex: 0,
-				startPtsOffense: 0,
-				startPtsDefense: 0,
-				possessions: 0,
-			};
 		}
 	}
 
 	// Function called at the end of each possession
-	private onPossessionEnd() {
-		// Get the current lineups
-		const offenseLineup = this.playersOnCourt[this.o].map(
-			p => this.team[this.o].player[p].id,
-		);
-		const defenseLineup = this.playersOnCourt[this.d].map(
-			p => this.team[this.d].player[p].id,
-		);
+	// private onPossessionEnd() {
+	// 	// Get the current lineups
+	// 	const offenseLineup = this.playersOnCourt[this.o].map(
+	// 		p => this.team[this.o].player[p].id,
+	// 	);
+	// 	const defenseLineup = this.playersOnCourt[this.d].map(
+	// 		p => this.team[this.d].player[p].id,
+	// 	);
 
-		// Check if the lineup has changed
-		if (
-			!this.arraysEqual(this.currentStint.offensePlayerIds, offenseLineup) ||
-			!this.arraysEqual(this.currentStint.defensePlayerIds, defenseLineup)
-		) {
-			// Before starting a new stint, calculate and store the point differential for the current stint
-			this.logCurrentStint();
+	// 	// Check if the lineup has changed
+	// 	if (
+	// 		!this.arraysEqual(this.currentStint.offensePlayerIds, offenseLineup) ||
+	// 		!this.arraysEqual(this.currentStint.defensePlayerIds, defenseLineup)
+	// 	) {
+	// 		// Before starting a new stint, calculate and store the point differential for the current stint
+	// 		this.logCurrentStint();
 
-			// Start a new current stint with new lineups
-			this.currentStint = {
-				offensePlayerIds: [...offenseLineup],
-				defensePlayerIds: [...defenseLineup],
-				offenseTeamIndex: this.o,
-				defenseTeamIndex: this.d,
-				startPtsOffense: this.team[this.o].stat.pts,
-				startPtsDefense: this.team[this.d].stat.pts,
-				possessions: 0,
-			};
-		}
+	// 		// Start a new current stint with new lineups
+	// 		this.currentStint = {
+	// 			offensePlayerIds: [...offenseLineup],
+	// 			defensePlayerIds: [...defenseLineup],
+	// 			offenseTeamIndex: this.o,
+	// 			defenseTeamIndex: this.d,
+	// 			startPtsOffense: this.team[this.o].stat.pts,
+	// 			startPtsDefense: this.team[this.d].stat.pts,
+	// 			possessions: 0,
+	// 		};
+	// 	}
 
-		// Update current stint data
-		this.currentStint.possessions += 1;
-	}
+	// 	// Update current stint data
+	// 	this.currentStint.possessions += 1;
+	// }
 
 	// Helper function to compare arrays
-	private arraysEqual(a: number[], b: number[]): boolean {
-		return a.length === b.length && a.every((val, index) => val === b[index]);
-	}
+	// private arraysEqual(a: number[], b: number[]): boolean {
+	// 	return a.length === b.length && a.every((val, index) => val === b[index]);
+	// }
 	run() {
 		// Simulate the game up to the end of regulation
 		this.simRegulation();
@@ -940,7 +931,7 @@ class GameSim extends GameSimBase {
 		this.o = this.o === 1 ? 0 : 1;
 		this.d = this.o === 1 ? 0 : 1;
 		this.updateTeamCompositeRatings();
-
+		this.currentStint.possessions += 1;
 		const dtInbound = this.dtInbound();
 		this.t -= dtInbound;
 		this.possessionLength = 0;
@@ -972,7 +963,7 @@ class GameSim extends GameSimBase {
 				injuries,
 			});
 			// Call onPossessionEnd after the possession ends
-			this.onPossessionEnd();
+			// this.onPossessionEnd();
 		}
 	}
 
@@ -1291,7 +1282,44 @@ class GameSim extends GameSimBase {
 				}
 			}
 		}
+		if (substitutions && !recordStarters) {
+			// Get current lineups
+			const homeLineup = this.playersOnCourt[0]
+				.map(p => this.team[0].player[p].id)
+				.sort((a, b) => a - b);
+			const awayLineup = this.playersOnCourt[1]
+				.map(p => this.team[1].player[p].id)
+				.sort((a, b) => a - b);
 
+			// Compare with currentStint
+			if (
+				homeLineup.join("-") !== this.currentStint.homePlayerIds.join("-") ||
+				awayLineup.join("-") !== this.currentStint.awayPlayerIds.join("-")
+			) {
+				// Log the current stint
+				this.logCurrentStint();
+
+				// Start a new stint
+				this.currentStint = {
+					homePlayerIds: homeLineup,
+					awayPlayerIds: awayLineup,
+					startPtsHome: this.team[0].stat.pts,
+					startPtsAway: this.team[1].stat.pts,
+					possessions: 0,
+					season: g.get("season"), // Include the season
+				};
+			}
+			// Record starters if that hasn't been done yet. This should run the first time this function is called, and never again.
+			if (recordStarters) {
+				for (const t of teamNums) {
+					for (let p = 0; p < this.team[t].player.length; p++) {
+						if (this.playersOnCourt[t].includes(p)) {
+							this.recordStat(t, p, "gs");
+						}
+					}
+				}
+			}
+		}
 		return substitutions;
 	}
 

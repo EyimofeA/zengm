@@ -156,16 +156,14 @@ export interface LeagueDB extends DBSchema {
 		key: number;
 		value: {
 			id: number;
-			gameId: number;
-			offensePlayerIds: number[]; // Array of 5 offensive player IDs
-			defensePlayerIds: number[]; // Array of 5 defensive player IDs
+			homePlayerIds: number[];
+			awayPlayerIds: number[];
 			pointDifferential: number;
 			possessions: number;
+			season: number;
 		};
 		autoIncrementKeyPath: "id";
-		indexes: {
-			gameId: number;
-		};
+		// Remove indexes as we no longer have any
 	};
 
 	seasonLeaders: {
@@ -451,7 +449,8 @@ const create = (db: IDBPDatabase<LeagueDB>) => {
 		keyPath: "id",
 		autoIncrement: true,
 	});
-	lineupDataStore.createIndex("gameId", "gameId", { unique: false });
+	// No indexes to create since gameId is removed
+
 	const eventStore = db.createObjectStore("events", {
 		keyPath: "eid",
 		autoIncrement: true,
@@ -1514,15 +1513,18 @@ const migrate = async ({
 			keyPath: "rid",
 		});
 	}
+	// Updated Upgrade Logic
 	if (oldVersion <= 62) {
-		// Replace <LATEST_VERSION> with the appropriate version number
-		if (!db.objectStoreNames.contains("lineupData")) {
-			const lineupDataStore = db.createObjectStore("lineupData", {
-				keyPath: "id",
-				autoIncrement: true,
-			});
-			lineupDataStore.createIndex("gameId", "gameId", { unique: false });
+		// Delete the old lineupData store if it exists
+		if (db.objectStoreNames.contains("lineupData")) {
+			db.deleteObjectStore("lineupData");
 		}
+		// Create the new lineupData store
+		const lineupDataStore = db.createObjectStore("lineupData", {
+			keyPath: "id",
+			autoIncrement: true,
+		});
+		// No need to create indexes
 	}
 };
 
