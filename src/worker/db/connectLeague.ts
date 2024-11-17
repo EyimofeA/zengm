@@ -158,8 +158,10 @@ export interface LeagueDB extends DBSchema {
 			id: number;
 			homePlayerIds: number[];
 			awayPlayerIds: number[];
-			pointDifferential: number;
-			possessions: number;
+			homePossessions: number;
+			homePoints: number;
+			awayPossessions: number;
+			awayPoints: number;
 			season: number;
 		};
 		autoIncrementKeyPath: "id";

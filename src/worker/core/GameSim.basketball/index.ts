@@ -96,9 +96,10 @@ type TeamGameSim = {
 interface CurrentStint {
 	homePlayerIds: number[];
 	awayPlayerIds: number[];
-	startPtsHome: number;
-	startPtsAway: number;
-	possessions: number;
+	homePossessions: number;
+	homePoints: number;
+	awayPossessions: number;
+	awayPoints: number;
 	season: number;
 }
 
@@ -341,16 +342,13 @@ class GameSim extends GameSimBase {
 
 		// Initialize current stint
 		this.currentStint = {
-			homePlayerIds: this.playersOnCourt[0]
-				.map(p => this.team[0].player[p].id)
-				.sort((a, b) => a - b),
-			awayPlayerIds: this.playersOnCourt[1]
-				.map(p => this.team[1].player[p].id)
-				.sort((a, b) => a - b),
-			startPtsHome: this.team[0].stat.pts,
-			startPtsAway: this.team[1].stat.pts,
-			possessions: 0,
-			season: g.get("season"), // Include the season
+			homePlayerIds: this.playersOnCourt[0].map(p => this.team[0].player[p].id),
+			awayPlayerIds: this.playersOnCourt[1].map(p => this.team[1].player[p].id),
+			homePossessions: 0,
+			homePoints: 0,
+			awayPossessions: 0,
+			awayPoints: 0,
+			season: g.get("season"),
 		};
 	}
 
@@ -423,25 +421,23 @@ class GameSim extends GameSimBase {
 	public stints: {
 		homePlayerIds: number[];
 		awayPlayerIds: number[];
-		pointDifferential: number;
-		possessions: number;
+		homePossessions: number;
+		homePoints: number;
+		awayPossessions: number;
+		awayPoints: number;
 	}[] = [];
 
 	private logCurrentStint() {
-		if (this.currentStint.possessions > 0) {
-			// Calculate the point differential for the stint
-			const pointDifferential =
-				this.team[0].stat.pts -
-				this.currentStint.startPtsHome -
-				(this.team[1].stat.pts - this.currentStint.startPtsAway);
-
+		if (this.currentStint) {
 			// Prepare the data to log
 			const stintData = {
 				homePlayerIds: this.currentStint.homePlayerIds,
 				awayPlayerIds: this.currentStint.awayPlayerIds,
-				pointDifferential,
-				possessions: this.currentStint.possessions,
-				season: g.get("season"), // Include the season
+				homePossessions: this.currentStint.homePossessions,
+				homePoints: this.currentStint.homePoints,
+				awayPossessions: this.currentStint.awayPossessions,
+				awayPoints: this.currentStint.awayPoints,
+				season: this.currentStint.season,
 			};
 
 			// Add to the stints array
@@ -931,11 +927,17 @@ class GameSim extends GameSimBase {
 		this.o = this.o === 1 ? 0 : 1;
 		this.d = this.o === 1 ? 0 : 1;
 		this.updateTeamCompositeRatings();
-		this.currentStint.possessions += 1;
+		const startPtsHome = this.team[0].stat.pts;
+		const startPtsAway = this.team[1].stat.pts;
+
+		// Determine which team is on offense and defense
+		const offense = this.o; // Index of the team on offense (0 for home, 1 for away)
+
+		// Simulate the possession
 		const dtInbound = this.dtInbound();
 		this.t -= dtInbound;
 		this.possessionLength = 0;
-		this.isClockRunning = true; // Set after computing dtIinbound!
+		this.isClockRunning = true; // Set after computing dtInbound!
 
 		const clockFactor = this.getClockFactor();
 		const outcome = this.getPossessionOutcome(clockFactor);
@@ -951,19 +953,35 @@ class GameSim extends GameSimBase {
 			this.d = this.o === 1 ? 0 : 1;
 		}
 
+		// Update playing time and handle injuries
 		this.updatePlayingTime(dtInbound + this.possessionLength);
 		const injuries = this.injuries();
 
+		// Calculate points scored during the possession
+		const pointsScoredHome = this.team[0].stat.pts - startPtsHome;
+		const pointsScoredAway = this.team[1].stat.pts - startPtsAway;
+
+		// Update current stint stats
+		if (this.currentStint) {
+			if (offense === 0) {
+				// Home team had the possession
+				this.currentStint.homePossessions += 1;
+				this.currentStint.homePoints += pointsScoredHome;
+			} else {
+				// Away team had the possession
+				this.currentStint.awayPossessions += 1;
+				this.currentStint.awayPoints += pointsScoredAway;
+			}
+		}
+
 		this.prevPossessionOutcome = outcome;
 
-		// With 0 on the clock, either the game is over (no subs) or the subs should happen at start of next period
+		// Handle substitutions
 		if (this.t > 0 && !this.elamDone) {
 			this.doSubstitutionsIfDeadBall({
 				type: "afterPossession",
 				injuries,
 			});
-			// Call onPossessionEnd after the possession ends
-			// this.onPossessionEnd();
 		}
 	}
 
@@ -1301,12 +1319,17 @@ class GameSim extends GameSimBase {
 
 				// Start a new stint
 				this.currentStint = {
-					homePlayerIds: homeLineup,
-					awayPlayerIds: awayLineup,
-					startPtsHome: this.team[0].stat.pts,
-					startPtsAway: this.team[1].stat.pts,
-					possessions: 0,
-					season: g.get("season"), // Include the season
+					homePlayerIds: this.playersOnCourt[0].map(
+						p => this.team[0].player[p].id,
+					),
+					awayPlayerIds: this.playersOnCourt[1].map(
+						p => this.team[1].player[p].id,
+					),
+					homePossessions: 0,
+					homePoints: 0,
+					awayPossessions: 0,
+					awayPoints: 0,
+					season: g.get("season"),
 				};
 			}
 			// Record starters if that hasn't been done yet. This should run the first time this function is called, and never again.
