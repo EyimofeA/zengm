@@ -1,6 +1,7 @@
 import type { IDBPDatabase } from "@dumbmatter/idb";
 import type { LeagueDB } from "../db/connectLeague";
 
+
 export type RapmByPid = Record<number, { rapm1: number; rapm3: number; rapm5: number }>; 
 
 const solve = (A: number[][], b: number[]): number[] => {

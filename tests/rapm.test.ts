@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { IDBPDatabase, openDB } from "@dumbmatter/idb";
+
 import { computeRapmForSeason } from "../src/worker/stats/computeRapm";
 
 interface Lineup {
