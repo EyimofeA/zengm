@@ -28,6 +28,13 @@ const newPhasePlayoffs = async (
                                p.rapm3 = vals.rapm3;
                                p.rapm5 = vals.rapm5;
                                await idb.cache.players.put(p);
+                               await idb.cache.playerRapm.put({
+                                       pid,
+                                       season: g.get("season"),
+                                       rapm1: vals.rapm1,
+                                       rapm3: vals.rapm3,
+                                       rapm5: vals.rapm5,
+                               });
                        }
                }
        }
