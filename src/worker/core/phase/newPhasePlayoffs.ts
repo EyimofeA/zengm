@@ -1,6 +1,7 @@
 import { finances, player, season, team } from "..";
 import { idb } from "../../db";
 import { achievement, g, helpers, local, logEvent } from "../../util";
+import { computeRapmForSeason } from "../../stats/computeRapm";
 import type {
 	Conditions,
 	PhaseReturn,
@@ -11,10 +12,28 @@ const newPhasePlayoffs = async (
 	conditions: Conditions,
 	liveGameSim: boolean = false,
 ): Promise<PhaseReturn> => {
-	await achievement.check("afterRegularSeason", conditions);
+       await achievement.check("afterRegularSeason", conditions);
 
-	// In case this was somehow set already
-	local.playingUntilEndOfRound = false;
+       if (!local.autoPlayUntil) {
+               const rapm = await computeRapmForSeason(
+                       g.get("season"),
+                       [1, 3, 5],
+                       idb.league,
+               );
+               for (const [pidRaw, vals] of Object.entries(rapm)) {
+                       const pid = parseInt(pidRaw);
+                       const p = await idb.cache.players.get(pid);
+                       if (p) {
+                               p.rapm1 = vals.rapm1;
+                               p.rapm3 = vals.rapm3;
+                               p.rapm5 = vals.rapm5;
+                               await idb.cache.players.put(p);
+                       }
+               }
+       }
+
+       // In case this was somehow set already
+       local.playingUntilEndOfRound = false;
 
 	// Set playoff matchups
 	const { byConf, playIns, series, tidPlayIn, tidPlayoffs } =
