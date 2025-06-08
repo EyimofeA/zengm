@@ -1281,13 +1281,16 @@ export type PlayerWithoutKey<PlayerRatings = any> = {
 				fromTid: number;
 		  }
 	)[]; // Only optional cause I'm worried about upgrades
-	value: number;
-	valueNoPot: number;
-	valueFuzz: number;
-	valueNoPotFuzz: number;
-	watch?: number;
-	weight: number;
-	yearsFreeAgent: number;
+        value: number;
+        valueNoPot: number;
+        valueFuzz: number;
+        valueNoPotFuzz: number;
+        rapm1?: number | null;
+        rapm3?: number | null;
+        rapm5?: number | null;
+        watch?: number;
+        weight: number;
+        yearsFreeAgent: number;
 
 	// Only for hockey goalies
 	numConsecutiveGamesG?: number;
