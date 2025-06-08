@@ -98,11 +98,14 @@ const generate = (
 		weight,
 		yearsFreeAgent: 0,
 		// These should be set by updateValues after player is completely done (automatic in develop)
-		value: 0,
-		valueNoPot: 0,
-		valueFuzz: 0,
-		valueNoPotFuzz: 0,
-	};
+                value: 0,
+                valueNoPot: 0,
+                valueFuzz: 0,
+                valueNoPotFuzz: 0,
+                rapm1: null,
+                rapm3: null,
+                rapm5: null,
+        };
 
 	return p;
 };
