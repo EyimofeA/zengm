@@ -33,7 +33,6 @@ def run_rapm(possessions,player_list, player_index):
     train_x, train_y, sample_weights = construct_design_matrix(possessions, player_index)
     # Use specified alphas
     alphas = [1500, 1750, 2000, 2250, 2500, 2750, 3000, 3250, 3500, 3750, 4000,5000,6000]
-    alphas = [3000]
     results, intercept = calculate_rapm(train_x, train_y, alphas, player_list,sample_weights=sample_weights)
     return results
 # Step 2: Convert to Sparse Matrices
@@ -132,7 +131,7 @@ if __name__ == "__main__":
         seasons = list(range(args.start_season, args.end_season + 1))
 
     # Step 1: Prepare Data
-    possessions, player_list, player_index = prepare_data('transformed_lineup_data.csv', seasons=seasons)
+    possessions, player_list, player_index = prepare_data('bbgm_rapm/transformed_lineup_data.csv', seasons=seasons)
 
     # Check if possessions are empty after filtering
     if possessions.empty:
@@ -163,22 +162,22 @@ if __name__ == "__main__":
             all_results = pd.concat([all_results, results], ignore_index=True)
             print(results.sort_values('RAPM', ascending=False).head(5))
         # Save all results to a single CSV
-        output_file = f'rapm_results_{seasons[0]}_{seasons[-1]}_interval_{args.interval}.csv'
+        output_file = f'bbgm_rapm/rapm_results_{seasons[0]}_{seasons[-1]}_interval_{args.interval}.csv'
         all_results.to_csv(output_file, index=False)
             
     else:
         results = run_rapm(possessions, player_list, player_index)
 
         # Merge with player names
-        player_names = pd.read_csv('players.csv')
+        player_names = pd.read_csv('bbgm_rapm/players.csv')
         results = results.merge(player_names, on='playerId', how='left')
         results = results[['playerId', 'First Name', 'Last Name', 'RAPM', 'RAPM_Rank', 'RAPM_Off', 'RAPM_Def']]
 
         # Save results
         if seasons:
-            output_file = f'rapm_results_{seasons[0]}_{seasons[-1]}.csv'
+            output_file = f'bbgm_rapm/rapm_results_{seasons[0]}_{seasons[-1]}.csv'
         else:
-            output_file = 'rapm_results.csv'
+            output_file = 'bbgm_rapm/rapm_results.csv'
         results.to_csv(output_file, index=False)
 
         # Display top players

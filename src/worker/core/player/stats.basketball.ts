@@ -21,6 +21,9 @@ const stats = {
 		"obpm",
 		"dbpm",
 		"vorp",
+		"rapm1",
+		"rapm3",
+		"rapm5",
 	] as const,
 	raw: [
 		"gp",

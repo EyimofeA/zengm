@@ -457,7 +457,7 @@ const create = (db: IDBPDatabase<LeagueDB>) => {
 		keyPath: "dpid",
 		autoIncrement: true,
 	});
-	const lineupDataStore = db.createObjectStore("lineupData", {
+	db.createObjectStore("lineupData", {
 		keyPath: "id",
 		autoIncrement: true,
 	});
@@ -1540,7 +1540,7 @@ const migrate = async ({
                         db.deleteObjectStore("lineupData");
 		}
 		// Create the new lineupData store
-		const lineupDataStore = db.createObjectStore("lineupData", {
+		db.createObjectStore("lineupData", {
 			keyPath: "id",
 			autoIncrement: true,
 		});

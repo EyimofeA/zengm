@@ -1210,6 +1210,24 @@ const sportSpecificCols = bySport<{
 			sortType: "number",
 			title: "VORP",
 		},
+		"stat:rapm1": {
+			desc: "1 Year RAPM",
+			sortSequence: ["desc", "asc"],
+			sortType: "number",
+			title: "RAPM1",
+		},
+		"stat:rapm3": {
+			desc: "3 Year RAPM",
+			sortSequence: ["desc", "asc"],
+			sortType: "number",
+			title: "RAPM3",
+		},
+		"stat:rapm5": {
+			desc: "5 Year RAPM",
+			sortSequence: ["desc", "asc"],
+			sortType: "number",
+			title: "RAPM5",
+		},
 		"stat:fgAtRim": {
 			desc: "At Rim Made",
 			sortSequence: ["desc", "asc"],

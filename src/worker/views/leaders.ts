@@ -226,6 +226,15 @@ export const getCategoriesAndStats = (onlyStat?: string) => {
 				stat: "vorp",
 			},
 			{
+				stat: "rapm1",
+			},
+			{
+				stat: "rapm3",
+			},
+			{
+				stat: "rapm5",
+			},
+			{
 				stat: "onOff100",
 			},
 		],

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { IDBPDatabase, openDB } from "@dumbmatter/idb";
+import { openDB } from "@dumbmatter/idb";
+import type { IDBPDatabase, DBSchema } from "@dumbmatter/idb";
 
-import { computeRapmForSeason } from "../src/worker/stats/computeRapm";
+import { computeRapmForSeason } from "./computeRapm";
 
 interface Lineup {
   id?: number;
@@ -61,13 +62,13 @@ describe("computeRapmForSeason", () => {
   });
 
   test("numbers are finite and rapm3 is mean of rapm1s with weights", async () => {
-    const rapm = await computeRapmForSeason(1, [1, 3], db);
+    const rapm = await computeRapmForSeason(1, [1, 3], db as any);
     for (const vals of Object.values(rapm)) {
       expect(Number.isFinite(vals.rapm1)).toBe(true);
       expect(Number.isFinite(vals.rapm3)).toBe(true);
     }
-    const r0 = await computeRapmForSeason(0, [1], db);
-    const r1 = await computeRapmForSeason(1, [1], db);
+    const r0 = await computeRapmForSeason(0, [1], db as any);
+    const r1 = await computeRapmForSeason(1, [1], db as any);
     for (const pid of Object.keys(rapm)) {
       const v0 = r0[Number(pid)]?.rapm1 ?? 0;
       const v1 = r1[Number(pid)]?.rapm1 ?? 0;
