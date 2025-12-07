@@ -17,7 +17,7 @@ const newPhasePlayoffs = async (
 	// Calculate RAPM for all players and save to their current season stats
 	const rapm = await computeRapmForSeason(
 		g.get("season"),
-		[1, 3, 5],
+		[1, 3],
 		idb.league,
 	);
 
@@ -32,9 +32,12 @@ const newPhasePlayoffs = async (
 
 			if (currentSeasonStats) {
 				// Add RAPM values to the stats row
+				currentSeasonStats.rapm1Off = vals.rapm1Off;
+				currentSeasonStats.rapm1Def = vals.rapm1Def;
 				currentSeasonStats.rapm1 = vals.rapm1;
+				currentSeasonStats.rapm3Off = vals.rapm3Off;
+				currentSeasonStats.rapm3Def = vals.rapm3Def;
 				currentSeasonStats.rapm3 = vals.rapm3;
-				currentSeasonStats.rapm5 = vals.rapm5;
 				await idb.cache.players.put(p);
 			}
 		}

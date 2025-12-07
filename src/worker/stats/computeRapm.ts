@@ -3,7 +3,14 @@ import type { LeagueDB } from "../db/connectLeague";
 
 export type RapmByPid = Record<
 	number,
-	{ rapm1: number; rapm3: number; rapm5: number }
+	{
+		rapm1Off: number;
+		rapm1Def: number;
+		rapm1: number;
+		rapm3Off: number;
+		rapm3Def: number;
+		rapm3: number;
+	}
 >;
 
 const solve = (A: number[][], b: number[]): number[] => {
@@ -68,7 +75,7 @@ const runRegression = (
 	pids: number[],
 	pidToIndex: Map<number, number>,
 	lambda: number,
-): number[] => {
+): { off: number[]; def: number[]; net: number[] } => {
 	const n = pids.length;
 	const size = n * 2;
 	// Create matrix for BOTH offense and defense (2x the players)
@@ -195,12 +202,16 @@ const runRegression = (
 
 	const coeffs = solve(A, b);
 
-	// Return net RAPM (offense - defense) for each player
-	const netRapm = new Array(n);
+	// Return offense, defense, and net RAPM for each player
+	const off = new Array(n);
+	const def = new Array(n);
+	const net = new Array(n);
 	for (let i = 0; i < n; i++) {
-		netRapm[i] = coeffs[i] - coeffs[i + n];
+		off[i] = coeffs[i];
+		def[i] = coeffs[i + n];
+		net[i] = coeffs[i] - coeffs[i + n];
 	}
-	return netRapm;
+	return { off, def, net };
 };
 
 
@@ -231,7 +242,10 @@ export const computeRapmForSeason = async (
 
 	const lambda = 500;
 
-	const coeffByN: Record<number, number[]> = {};
+	const coeffByN: Record<
+		number,
+		{ off: number[]; def: number[]; net: number[] }
+	> = {};
 	for (const n of seasonsBack) {
 		const start = season - n + 1;
 		const stints = stintsAll.filter(l => l.season >= start);
@@ -241,11 +255,23 @@ export const computeRapmForSeason = async (
 	const output: RapmByPid = {};
 	for (let i = 0; i < pids.length; i++) {
 		// Multiply by 100 to match standard RAPM scale (points per 100 possessions)
+		const rapm1Off = (coeffByN[1]?.off[i] ?? 0) * 100;
+		const rapm1Def = (coeffByN[1]?.def[i] ?? 0) * 100;
+		const rapm1 = (coeffByN[1]?.net[i] ?? 0) * 100;
+
+		const rapm3Off =
+			(coeffByN[3]?.off[i] ?? coeffByN[1]?.off[i] ?? 0) * 100;
+		const rapm3Def =
+			(coeffByN[3]?.def[i] ?? coeffByN[1]?.def[i] ?? 0) * 100;
+		const rapm3 = (coeffByN[3]?.net[i] ?? coeffByN[1]?.net[i] ?? 0) * 100;
+
 		output[pids[i]] = {
-			rapm1: (coeffByN[1]?.[i] ?? 0) * 100,
-			rapm3: (coeffByN[3]?.[i] ?? coeffByN[1]?.[i] ?? 0) * 100,
-			rapm5:
-				(coeffByN[5]?.[i] ?? coeffByN[3]?.[i] ?? coeffByN[1]?.[i] ?? 0) * 100,
+			rapm1Off,
+			rapm1Def,
+			rapm1,
+			rapm3Off,
+			rapm3Def,
+			rapm3,
 		};
 	}
 	return output;
