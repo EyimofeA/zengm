@@ -77,8 +77,8 @@ const runRegression = (
 	lambda: number,
 ): { off: number[]; def: number[]; net: number[] } => {
 	const n = pids.length;
-	const size = n * 2;
-	// Create matrix for BOTH offense and defense (2x the players)
+	const size = n * 2 + 1; // +1 for intercept
+	// Create matrix for BOTH offense and defense (2x the players) + intercept
 	const A = Array.from({ length: size }, () => new Array(size).fill(0));
 	const b = new Array(size).fill(0);
 
@@ -98,7 +98,7 @@ const runRegression = (
 		// Home possession observation
 		if (stint.homePossessions > 0) {
 			const weight = stint.homePossessions;
-			const y = stint.homePoints / weight;
+			const y = stint.homePoints / stint.homePossessions;
 
 			// Get indices directly (avoid intermediate array allocation)
 			const homeOff0 = pidToIndex.get(stint.homePlayerIds[0])!;
@@ -111,45 +111,158 @@ const runRegression = (
 			const awayDef2 = pidToIndex.get(stint.awayPlayerIds[2])! + n;
 			const awayDef3 = pidToIndex.get(stint.awayPlayerIds[3])! + n;
 			const awayDef4 = pidToIndex.get(stint.awayPlayerIds[4])! + n;
+			const interceptIdx = n * 2; // Intercept is the last coefficient
 
 			const wy = weight * y;
 			// Update b vector
-			b[homeOff0] += wy; b[homeOff1] += wy; b[homeOff2] += wy; b[homeOff3] += wy; b[homeOff4] += wy;
-			b[awayDef0] += wy; b[awayDef1] += wy; b[awayDef2] += wy; b[awayDef3] += wy; b[awayDef4] += wy;
+			b[homeOff0] += wy;
+			b[homeOff1] += wy;
+			b[homeOff2] += wy;
+			b[homeOff3] += wy;
+			b[homeOff4] += wy;
+			b[awayDef0] += wy;
+			b[awayDef1] += wy;
+			b[awayDef2] += wy;
+			b[awayDef3] += wy;
+			b[awayDef4] += wy;
+			b[interceptIdx] += wy; // Intercept term
 
 			// Update A matrix (symmetric, so only need to update upper triangle)
 			// Home offensive block
-			A[homeOff0][homeOff0] += weight; A[homeOff0][homeOff1] += weight; A[homeOff0][homeOff2] += weight; A[homeOff0][homeOff3] += weight; A[homeOff0][homeOff4] += weight;
-			A[homeOff1][homeOff0] += weight; A[homeOff1][homeOff1] += weight; A[homeOff1][homeOff2] += weight; A[homeOff1][homeOff3] += weight; A[homeOff1][homeOff4] += weight;
-			A[homeOff2][homeOff0] += weight; A[homeOff2][homeOff1] += weight; A[homeOff2][homeOff2] += weight; A[homeOff2][homeOff3] += weight; A[homeOff2][homeOff4] += weight;
-			A[homeOff3][homeOff0] += weight; A[homeOff3][homeOff1] += weight; A[homeOff3][homeOff2] += weight; A[homeOff3][homeOff3] += weight; A[homeOff3][homeOff4] += weight;
-			A[homeOff4][homeOff0] += weight; A[homeOff4][homeOff1] += weight; A[homeOff4][homeOff2] += weight; A[homeOff4][homeOff3] += weight; A[homeOff4][homeOff4] += weight;
+			A[homeOff0][homeOff0] += weight;
+			A[homeOff0][homeOff1] += weight;
+			A[homeOff0][homeOff2] += weight;
+			A[homeOff0][homeOff3] += weight;
+			A[homeOff0][homeOff4] += weight;
+			A[homeOff1][homeOff0] += weight;
+			A[homeOff1][homeOff1] += weight;
+			A[homeOff1][homeOff2] += weight;
+			A[homeOff1][homeOff3] += weight;
+			A[homeOff1][homeOff4] += weight;
+			A[homeOff2][homeOff0] += weight;
+			A[homeOff2][homeOff1] += weight;
+			A[homeOff2][homeOff2] += weight;
+			A[homeOff2][homeOff3] += weight;
+			A[homeOff2][homeOff4] += weight;
+			A[homeOff3][homeOff0] += weight;
+			A[homeOff3][homeOff1] += weight;
+			A[homeOff3][homeOff2] += weight;
+			A[homeOff3][homeOff3] += weight;
+			A[homeOff3][homeOff4] += weight;
+			A[homeOff4][homeOff0] += weight;
+			A[homeOff4][homeOff1] += weight;
+			A[homeOff4][homeOff2] += weight;
+			A[homeOff4][homeOff3] += weight;
+			A[homeOff4][homeOff4] += weight;
 
 			// Away defensive block
-			A[awayDef0][awayDef0] += weight; A[awayDef0][awayDef1] += weight; A[awayDef0][awayDef2] += weight; A[awayDef0][awayDef3] += weight; A[awayDef0][awayDef4] += weight;
-			A[awayDef1][awayDef0] += weight; A[awayDef1][awayDef1] += weight; A[awayDef1][awayDef2] += weight; A[awayDef1][awayDef3] += weight; A[awayDef1][awayDef4] += weight;
-			A[awayDef2][awayDef0] += weight; A[awayDef2][awayDef1] += weight; A[awayDef2][awayDef2] += weight; A[awayDef2][awayDef3] += weight; A[awayDef2][awayDef4] += weight;
-			A[awayDef3][awayDef0] += weight; A[awayDef3][awayDef1] += weight; A[awayDef3][awayDef2] += weight; A[awayDef3][awayDef3] += weight; A[awayDef3][awayDef4] += weight;
-			A[awayDef4][awayDef0] += weight; A[awayDef4][awayDef1] += weight; A[awayDef4][awayDef2] += weight; A[awayDef4][awayDef3] += weight; A[awayDef4][awayDef4] += weight;
+			A[awayDef0][awayDef0] += weight;
+			A[awayDef0][awayDef1] += weight;
+			A[awayDef0][awayDef2] += weight;
+			A[awayDef0][awayDef3] += weight;
+			A[awayDef0][awayDef4] += weight;
+			A[awayDef1][awayDef0] += weight;
+			A[awayDef1][awayDef1] += weight;
+			A[awayDef1][awayDef2] += weight;
+			A[awayDef1][awayDef3] += weight;
+			A[awayDef1][awayDef4] += weight;
+			A[awayDef2][awayDef0] += weight;
+			A[awayDef2][awayDef1] += weight;
+			A[awayDef2][awayDef2] += weight;
+			A[awayDef2][awayDef3] += weight;
+			A[awayDef2][awayDef4] += weight;
+			A[awayDef3][awayDef0] += weight;
+			A[awayDef3][awayDef1] += weight;
+			A[awayDef3][awayDef2] += weight;
+			A[awayDef3][awayDef3] += weight;
+			A[awayDef3][awayDef4] += weight;
+			A[awayDef4][awayDef0] += weight;
+			A[awayDef4][awayDef1] += weight;
+			A[awayDef4][awayDef2] += weight;
+			A[awayDef4][awayDef3] += weight;
+			A[awayDef4][awayDef4] += weight;
 
 			// Cross block (home off x away def)
-			A[homeOff0][awayDef0] += weight; A[homeOff0][awayDef1] += weight; A[homeOff0][awayDef2] += weight; A[homeOff0][awayDef3] += weight; A[homeOff0][awayDef4] += weight;
-			A[homeOff1][awayDef0] += weight; A[homeOff1][awayDef1] += weight; A[homeOff1][awayDef2] += weight; A[homeOff1][awayDef3] += weight; A[homeOff1][awayDef4] += weight;
-			A[homeOff2][awayDef0] += weight; A[homeOff2][awayDef1] += weight; A[homeOff2][awayDef2] += weight; A[homeOff2][awayDef3] += weight; A[homeOff2][awayDef4] += weight;
-			A[homeOff3][awayDef0] += weight; A[homeOff3][awayDef1] += weight; A[homeOff3][awayDef2] += weight; A[homeOff3][awayDef3] += weight; A[homeOff3][awayDef4] += weight;
-			A[homeOff4][awayDef0] += weight; A[homeOff4][awayDef1] += weight; A[homeOff4][awayDef2] += weight; A[homeOff4][awayDef3] += weight; A[homeOff4][awayDef4] += weight;
+			A[homeOff0][awayDef0] += weight;
+			A[homeOff0][awayDef1] += weight;
+			A[homeOff0][awayDef2] += weight;
+			A[homeOff0][awayDef3] += weight;
+			A[homeOff0][awayDef4] += weight;
+			A[homeOff1][awayDef0] += weight;
+			A[homeOff1][awayDef1] += weight;
+			A[homeOff1][awayDef2] += weight;
+			A[homeOff1][awayDef3] += weight;
+			A[homeOff1][awayDef4] += weight;
+			A[homeOff2][awayDef0] += weight;
+			A[homeOff2][awayDef1] += weight;
+			A[homeOff2][awayDef2] += weight;
+			A[homeOff2][awayDef3] += weight;
+			A[homeOff2][awayDef4] += weight;
+			A[homeOff3][awayDef0] += weight;
+			A[homeOff3][awayDef1] += weight;
+			A[homeOff3][awayDef2] += weight;
+			A[homeOff3][awayDef3] += weight;
+			A[homeOff3][awayDef4] += weight;
+			A[homeOff4][awayDef0] += weight;
+			A[homeOff4][awayDef1] += weight;
+			A[homeOff4][awayDef2] += weight;
+			A[homeOff4][awayDef3] += weight;
+			A[homeOff4][awayDef4] += weight;
 
-			A[awayDef0][homeOff0] += weight; A[awayDef0][homeOff1] += weight; A[awayDef0][homeOff2] += weight; A[awayDef0][homeOff3] += weight; A[awayDef0][homeOff4] += weight;
-			A[awayDef1][homeOff0] += weight; A[awayDef1][homeOff1] += weight; A[awayDef1][homeOff2] += weight; A[awayDef1][homeOff3] += weight; A[awayDef1][homeOff4] += weight;
-			A[awayDef2][homeOff0] += weight; A[awayDef2][homeOff1] += weight; A[awayDef2][homeOff2] += weight; A[awayDef2][homeOff3] += weight; A[awayDef2][homeOff4] += weight;
-			A[awayDef3][homeOff0] += weight; A[awayDef3][homeOff1] += weight; A[awayDef3][homeOff2] += weight; A[awayDef3][homeOff3] += weight; A[awayDef3][homeOff4] += weight;
-			A[awayDef4][homeOff0] += weight; A[awayDef4][homeOff1] += weight; A[awayDef4][homeOff2] += weight; A[awayDef4][homeOff3] += weight; A[awayDef4][homeOff4] += weight;
+			A[awayDef0][homeOff0] += weight;
+			A[awayDef0][homeOff1] += weight;
+			A[awayDef0][homeOff2] += weight;
+			A[awayDef0][homeOff3] += weight;
+			A[awayDef0][homeOff4] += weight;
+			A[awayDef1][homeOff0] += weight;
+			A[awayDef1][homeOff1] += weight;
+			A[awayDef1][homeOff2] += weight;
+			A[awayDef1][homeOff3] += weight;
+			A[awayDef1][homeOff4] += weight;
+			A[awayDef2][homeOff0] += weight;
+			A[awayDef2][homeOff1] += weight;
+			A[awayDef2][homeOff2] += weight;
+			A[awayDef2][homeOff3] += weight;
+			A[awayDef2][homeOff4] += weight;
+			A[awayDef3][homeOff0] += weight;
+			A[awayDef3][homeOff1] += weight;
+			A[awayDef3][homeOff2] += weight;
+			A[awayDef3][homeOff3] += weight;
+			A[awayDef3][homeOff4] += weight;
+			A[awayDef4][homeOff0] += weight;
+			A[awayDef4][homeOff1] += weight;
+			A[awayDef4][homeOff2] += weight;
+			A[awayDef4][homeOff3] += weight;
+			A[awayDef4][homeOff4] += weight;
+
+			// Intercept cross terms
+			A[interceptIdx][homeOff0] += weight;
+			A[interceptIdx][homeOff1] += weight;
+			A[interceptIdx][homeOff2] += weight;
+			A[interceptIdx][homeOff3] += weight;
+			A[interceptIdx][homeOff4] += weight;
+			A[interceptIdx][awayDef0] += weight;
+			A[interceptIdx][awayDef1] += weight;
+			A[interceptIdx][awayDef2] += weight;
+			A[interceptIdx][awayDef3] += weight;
+			A[interceptIdx][awayDef4] += weight;
+			A[homeOff0][interceptIdx] += weight;
+			A[homeOff1][interceptIdx] += weight;
+			A[homeOff2][interceptIdx] += weight;
+			A[homeOff3][interceptIdx] += weight;
+			A[homeOff4][interceptIdx] += weight;
+			A[awayDef0][interceptIdx] += weight;
+			A[awayDef1][interceptIdx] += weight;
+			A[awayDef2][interceptIdx] += weight;
+			A[awayDef3][interceptIdx] += weight;
+			A[awayDef4][interceptIdx] += weight;
+			A[interceptIdx][interceptIdx] += weight; // Intercept diagonal
 		}
 
 		// Away possession observation
 		if (stint.awayPossessions > 0) {
 			const weight = stint.awayPossessions;
-			const y = stint.awayPoints / weight;
+			const y = stint.awayPoints / stint.awayPossessions;
 
 			const awayOff0 = pidToIndex.get(stint.awayPlayerIds[0])!;
 			const awayOff1 = pidToIndex.get(stint.awayPlayerIds[1])!;
@@ -161,42 +274,155 @@ const runRegression = (
 			const homeDef2 = pidToIndex.get(stint.homePlayerIds[2])! + n;
 			const homeDef3 = pidToIndex.get(stint.homePlayerIds[3])! + n;
 			const homeDef4 = pidToIndex.get(stint.homePlayerIds[4])! + n;
+			const interceptIdx = n * 2; // Intercept is the last coefficient
 
 			const wy = weight * y;
-			b[awayOff0] += wy; b[awayOff1] += wy; b[awayOff2] += wy; b[awayOff3] += wy; b[awayOff4] += wy;
-			b[homeDef0] += wy; b[homeDef1] += wy; b[homeDef2] += wy; b[homeDef3] += wy; b[homeDef4] += wy;
+			b[awayOff0] += wy;
+			b[awayOff1] += wy;
+			b[awayOff2] += wy;
+			b[awayOff3] += wy;
+			b[awayOff4] += wy;
+			b[homeDef0] += wy;
+			b[homeDef1] += wy;
+			b[homeDef2] += wy;
+			b[homeDef3] += wy;
+			b[homeDef4] += wy;
+			b[interceptIdx] += wy; // Intercept term
 
 			// Away offensive block
-			A[awayOff0][awayOff0] += weight; A[awayOff0][awayOff1] += weight; A[awayOff0][awayOff2] += weight; A[awayOff0][awayOff3] += weight; A[awayOff0][awayOff4] += weight;
-			A[awayOff1][awayOff0] += weight; A[awayOff1][awayOff1] += weight; A[awayOff1][awayOff2] += weight; A[awayOff1][awayOff3] += weight; A[awayOff1][awayOff4] += weight;
-			A[awayOff2][awayOff0] += weight; A[awayOff2][awayOff1] += weight; A[awayOff2][awayOff2] += weight; A[awayOff2][awayOff3] += weight; A[awayOff2][awayOff4] += weight;
-			A[awayOff3][awayOff0] += weight; A[awayOff3][awayOff1] += weight; A[awayOff3][awayOff2] += weight; A[awayOff3][awayOff3] += weight; A[awayOff3][awayOff4] += weight;
-			A[awayOff4][awayOff0] += weight; A[awayOff4][awayOff1] += weight; A[awayOff4][awayOff2] += weight; A[awayOff4][awayOff3] += weight; A[awayOff4][awayOff4] += weight;
+			A[awayOff0][awayOff0] += weight;
+			A[awayOff0][awayOff1] += weight;
+			A[awayOff0][awayOff2] += weight;
+			A[awayOff0][awayOff3] += weight;
+			A[awayOff0][awayOff4] += weight;
+			A[awayOff1][awayOff0] += weight;
+			A[awayOff1][awayOff1] += weight;
+			A[awayOff1][awayOff2] += weight;
+			A[awayOff1][awayOff3] += weight;
+			A[awayOff1][awayOff4] += weight;
+			A[awayOff2][awayOff0] += weight;
+			A[awayOff2][awayOff1] += weight;
+			A[awayOff2][awayOff2] += weight;
+			A[awayOff2][awayOff3] += weight;
+			A[awayOff2][awayOff4] += weight;
+			A[awayOff3][awayOff0] += weight;
+			A[awayOff3][awayOff1] += weight;
+			A[awayOff3][awayOff2] += weight;
+			A[awayOff3][awayOff3] += weight;
+			A[awayOff3][awayOff4] += weight;
+			A[awayOff4][awayOff0] += weight;
+			A[awayOff4][awayOff1] += weight;
+			A[awayOff4][awayOff2] += weight;
+			A[awayOff4][awayOff3] += weight;
+			A[awayOff4][awayOff4] += weight;
 
 			// Home defensive block
-			A[homeDef0][homeDef0] += weight; A[homeDef0][homeDef1] += weight; A[homeDef0][homeDef2] += weight; A[homeDef0][homeDef3] += weight; A[homeDef0][homeDef4] += weight;
-			A[homeDef1][homeDef0] += weight; A[homeDef1][homeDef1] += weight; A[homeDef1][homeDef2] += weight; A[homeDef1][homeDef3] += weight; A[homeDef1][homeDef4] += weight;
-			A[homeDef2][homeDef0] += weight; A[homeDef2][homeDef1] += weight; A[homeDef2][homeDef2] += weight; A[homeDef2][homeDef3] += weight; A[homeDef2][homeDef4] += weight;
-			A[homeDef3][homeDef0] += weight; A[homeDef3][homeDef1] += weight; A[homeDef3][homeDef2] += weight; A[homeDef3][homeDef3] += weight; A[homeDef3][homeDef4] += weight;
-			A[homeDef4][homeDef0] += weight; A[homeDef4][homeDef1] += weight; A[homeDef4][homeDef2] += weight; A[homeDef4][homeDef3] += weight; A[homeDef4][homeDef4] += weight;
+			A[homeDef0][homeDef0] += weight;
+			A[homeDef0][homeDef1] += weight;
+			A[homeDef0][homeDef2] += weight;
+			A[homeDef0][homeDef3] += weight;
+			A[homeDef0][homeDef4] += weight;
+			A[homeDef1][homeDef0] += weight;
+			A[homeDef1][homeDef1] += weight;
+			A[homeDef1][homeDef2] += weight;
+			A[homeDef1][homeDef3] += weight;
+			A[homeDef1][homeDef4] += weight;
+			A[homeDef2][homeDef0] += weight;
+			A[homeDef2][homeDef1] += weight;
+			A[homeDef2][homeDef2] += weight;
+			A[homeDef2][homeDef3] += weight;
+			A[homeDef2][homeDef4] += weight;
+			A[homeDef3][homeDef0] += weight;
+			A[homeDef3][homeDef1] += weight;
+			A[homeDef3][homeDef2] += weight;
+			A[homeDef3][homeDef3] += weight;
+			A[homeDef3][homeDef4] += weight;
+			A[homeDef4][homeDef0] += weight;
+			A[homeDef4][homeDef1] += weight;
+			A[homeDef4][homeDef2] += weight;
+			A[homeDef4][homeDef3] += weight;
+			A[homeDef4][homeDef4] += weight;
 
 			// Cross block (away off x home def)
-			A[awayOff0][homeDef0] += weight; A[awayOff0][homeDef1] += weight; A[awayOff0][homeDef2] += weight; A[awayOff0][homeDef3] += weight; A[awayOff0][homeDef4] += weight;
-			A[awayOff1][homeDef0] += weight; A[awayOff1][homeDef1] += weight; A[awayOff1][homeDef2] += weight; A[awayOff1][homeDef3] += weight; A[awayOff1][homeDef4] += weight;
-			A[awayOff2][homeDef0] += weight; A[awayOff2][homeDef1] += weight; A[awayOff2][homeDef2] += weight; A[awayOff2][homeDef3] += weight; A[awayOff2][homeDef4] += weight;
-			A[awayOff3][homeDef0] += weight; A[awayOff3][homeDef1] += weight; A[awayOff3][homeDef2] += weight; A[awayOff3][homeDef3] += weight; A[awayOff3][homeDef4] += weight;
-			A[awayOff4][homeDef0] += weight; A[awayOff4][homeDef1] += weight; A[awayOff4][homeDef2] += weight; A[awayOff4][homeDef3] += weight; A[awayOff4][homeDef4] += weight;
+			A[awayOff0][homeDef0] += weight;
+			A[awayOff0][homeDef1] += weight;
+			A[awayOff0][homeDef2] += weight;
+			A[awayOff0][homeDef3] += weight;
+			A[awayOff0][homeDef4] += weight;
+			A[awayOff1][homeDef0] += weight;
+			A[awayOff1][homeDef1] += weight;
+			A[awayOff1][homeDef2] += weight;
+			A[awayOff1][homeDef3] += weight;
+			A[awayOff1][homeDef4] += weight;
+			A[awayOff2][homeDef0] += weight;
+			A[awayOff2][homeDef1] += weight;
+			A[awayOff2][homeDef2] += weight;
+			A[awayOff2][homeDef3] += weight;
+			A[awayOff2][homeDef4] += weight;
+			A[awayOff3][homeDef0] += weight;
+			A[awayOff3][homeDef1] += weight;
+			A[awayOff3][homeDef2] += weight;
+			A[awayOff3][homeDef3] += weight;
+			A[awayOff3][homeDef4] += weight;
+			A[awayOff4][homeDef0] += weight;
+			A[awayOff4][homeDef1] += weight;
+			A[awayOff4][homeDef2] += weight;
+			A[awayOff4][homeDef3] += weight;
+			A[awayOff4][homeDef4] += weight;
 
-			A[homeDef0][awayOff0] += weight; A[homeDef0][awayOff1] += weight; A[homeDef0][awayOff2] += weight; A[homeDef0][awayOff3] += weight; A[homeDef0][awayOff4] += weight;
-			A[homeDef1][awayOff0] += weight; A[homeDef1][awayOff1] += weight; A[homeDef1][awayOff2] += weight; A[homeDef1][awayOff3] += weight; A[homeDef1][awayOff4] += weight;
-			A[homeDef2][awayOff0] += weight; A[homeDef2][awayOff1] += weight; A[homeDef2][awayOff2] += weight; A[homeDef2][awayOff3] += weight; A[homeDef2][awayOff4] += weight;
-			A[homeDef3][awayOff0] += weight; A[homeDef3][awayOff1] += weight; A[homeDef3][awayOff2] += weight; A[homeDef3][awayOff3] += weight; A[homeDef3][awayOff4] += weight;
-			A[homeDef4][awayOff0] += weight; A[homeDef4][awayOff1] += weight; A[homeDef4][awayOff2] += weight; A[homeDef4][awayOff3] += weight; A[homeDef4][awayOff4] += weight;
+			A[homeDef0][awayOff0] += weight;
+			A[homeDef0][awayOff1] += weight;
+			A[homeDef0][awayOff2] += weight;
+			A[homeDef0][awayOff3] += weight;
+			A[homeDef0][awayOff4] += weight;
+			A[homeDef1][awayOff0] += weight;
+			A[homeDef1][awayOff1] += weight;
+			A[homeDef1][awayOff2] += weight;
+			A[homeDef1][awayOff3] += weight;
+			A[homeDef1][awayOff4] += weight;
+			A[homeDef2][awayOff0] += weight;
+			A[homeDef2][awayOff1] += weight;
+			A[homeDef2][awayOff2] += weight;
+			A[homeDef2][awayOff3] += weight;
+			A[homeDef2][awayOff4] += weight;
+			A[homeDef3][awayOff0] += weight;
+			A[homeDef3][awayOff1] += weight;
+			A[homeDef3][awayOff2] += weight;
+			A[homeDef3][awayOff3] += weight;
+			A[homeDef3][awayOff4] += weight;
+			A[homeDef4][awayOff0] += weight;
+			A[homeDef4][awayOff1] += weight;
+			A[homeDef4][awayOff2] += weight;
+			A[homeDef4][awayOff3] += weight;
+			A[homeDef4][awayOff4] += weight;
+
+			// Intercept cross terms
+			A[interceptIdx][awayOff0] += weight;
+			A[interceptIdx][awayOff1] += weight;
+			A[interceptIdx][awayOff2] += weight;
+			A[interceptIdx][awayOff3] += weight;
+			A[interceptIdx][awayOff4] += weight;
+			A[interceptIdx][homeDef0] += weight;
+			A[interceptIdx][homeDef1] += weight;
+			A[interceptIdx][homeDef2] += weight;
+			A[interceptIdx][homeDef3] += weight;
+			A[interceptIdx][homeDef4] += weight;
+			A[awayOff0][interceptIdx] += weight;
+			A[awayOff1][interceptIdx] += weight;
+			A[awayOff2][interceptIdx] += weight;
+			A[awayOff3][interceptIdx] += weight;
+			A[awayOff4][interceptIdx] += weight;
+			A[homeDef0][interceptIdx] += weight;
+			A[homeDef1][interceptIdx] += weight;
+			A[homeDef2][interceptIdx] += weight;
+			A[homeDef3][interceptIdx] += weight;
+			A[homeDef4][interceptIdx] += weight;
+			A[interceptIdx][interceptIdx] += weight; // Intercept diagonal
 		}
 	}
 
-	// Add regularization
-	for (let i = 0; i < size; i++) {
+	// Add regularization (but not to intercept)
+	for (let i = 0; i < size - 1; i++) {
 		A[i][i] += lambda;
 	}
 
@@ -208,12 +434,13 @@ const runRegression = (
 	const net = new Array(n);
 	for (let i = 0; i < n; i++) {
 		off[i] = coeffs[i];
-		def[i] = coeffs[i + n];
-		net[i] = coeffs[i] - coeffs[i + n];
+		// Negate defensive coefficient so positive defense = good defense (prevents opponent scoring)
+		def[i] = -coeffs[i + n];
+		// Net RAPM = offense + defense (both positive = good)
+		net[i] = coeffs[i] + def[i];
 	}
 	return { off, def, net };
 };
-
 
 export const computeRapmForSeason = async (
 	season: number,
@@ -259,10 +486,8 @@ export const computeRapmForSeason = async (
 		const rapm1Def = (coeffByN[1]?.def[i] ?? 0) * 100;
 		const rapm1 = (coeffByN[1]?.net[i] ?? 0) * 100;
 
-		const rapm3Off =
-			(coeffByN[3]?.off[i] ?? coeffByN[1]?.off[i] ?? 0) * 100;
-		const rapm3Def =
-			(coeffByN[3]?.def[i] ?? coeffByN[1]?.def[i] ?? 0) * 100;
+		const rapm3Off = (coeffByN[3]?.off[i] ?? coeffByN[1]?.off[i] ?? 0) * 100;
+		const rapm3Def = (coeffByN[3]?.def[i] ?? coeffByN[1]?.def[i] ?? 0) * 100;
 		const rapm3 = (coeffByN[3]?.net[i] ?? coeffByN[1]?.net[i] ?? 0) * 100;
 
 		output[pids[i]] = {
