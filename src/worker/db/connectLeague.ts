@@ -152,21 +152,31 @@ export interface LeagueDB extends DBSchema {
 			season: number;
 		};
 	};
-	lineupData: {
-		key: number;
-		value: {
-			id: number;
-			homePlayerIds: number[];
-			awayPlayerIds: number[];
-			homePossessions: number;
-			homePoints: number;
-			awayPossessions: number;
-			awayPoints: number;
-			season: number;
-		};
-		autoIncrementKeyPath: "id";
-		// Remove indexes as we no longer have any
-	};
+        lineupData: {
+                key: number;
+                value: {
+                        id: number;
+                        homePlayerIds: number[];
+                        awayPlayerIds: number[];
+                        homePossessions: number;
+                        homePoints: number;
+                        awayPossessions: number;
+                        awayPoints: number;
+                        season: number;
+                };
+                autoIncrementKeyPath: "id";
+                // Remove indexes as we no longer have any
+        };
+        playerRapm: {
+                key: number;
+                value: {
+                        pid: number;
+                        season: number;
+                        rapm1: number;
+                        rapm3: number;
+                        rapm5: number;
+                };
+        };
 
 	seasonLeaders: {
 		key: number;
@@ -447,7 +457,7 @@ const create = (db: IDBPDatabase<LeagueDB>) => {
 		keyPath: "dpid",
 		autoIncrement: true,
 	});
-	const lineupDataStore = db.createObjectStore("lineupData", {
+	db.createObjectStore("lineupData", {
 		keyPath: "id",
 		autoIncrement: true,
 	});
@@ -477,13 +487,16 @@ const create = (db: IDBPDatabase<LeagueDB>) => {
 		keyPath: "fid",
 		autoIncrement: true,
 	});
-	const playerStore = db.createObjectStore("players", {
-		keyPath: "pid",
-		autoIncrement: true,
-	});
-	db.createObjectStore("playoffSeries", {
-		keyPath: "season",
-	});
+        const playerStore = db.createObjectStore("players", {
+                keyPath: "pid",
+                autoIncrement: true,
+        });
+        db.createObjectStore("playerRapm", {
+                keyPath: "pid",
+        });
+        db.createObjectStore("playoffSeries", {
+                keyPath: "season",
+        });
 	db.createObjectStore("releasedPlayers", {
 		keyPath: "rid",
 		autoIncrement: true,
@@ -1510,19 +1523,24 @@ const migrate = async ({
 		});
 	}
 
-	if (oldVersion <= 62) {
-		db.createObjectStore("savedTradingBlock", {
-			keyPath: "rid",
-		});
-	}
-	// Updated Upgrade Logic
-	if (oldVersion <= 62) {
-		// Delete the old lineupData store if it exists
-		if (db.objectStoreNames.contains("lineupData")) {
-			db.deleteObjectStore("lineupData");
+        if (oldVersion <= 62) {
+                db.createObjectStore("savedTradingBlock", {
+                        keyPath: "rid",
+                });
+        }
+        if (oldVersion <= 63) {
+                db.createObjectStore("playerRapm", {
+                        keyPath: "pid",
+                });
+        }
+        // Updated Upgrade Logic
+        if (oldVersion <= 62) {
+                // Delete the old lineupData store if it exists
+                if (db.objectStoreNames.contains("lineupData")) {
+                        db.deleteObjectStore("lineupData");
 		}
 		// Create the new lineupData store
-		const lineupDataStore = db.createObjectStore("lineupData", {
+		db.createObjectStore("lineupData", {
 			keyPath: "id",
 			autoIncrement: true,
 		});

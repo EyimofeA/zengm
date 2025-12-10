@@ -1285,9 +1285,12 @@ export type PlayerWithoutKey<PlayerRatings = any> = {
         valueNoPot: number;
         valueFuzz: number;
         valueNoPotFuzz: number;
+        rapm1Off?: number | null;
+        rapm1Def?: number | null;
         rapm1?: number | null;
+        rapm3Off?: number | null;
+        rapm3Def?: number | null;
         rapm3?: number | null;
-        rapm5?: number | null;
         watch?: number;
         weight: number;
         yearsFreeAgent: number;

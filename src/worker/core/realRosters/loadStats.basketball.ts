@@ -40,6 +40,9 @@ export type BasketballStats = {
 		obpm?: number;
 		dbpm?: number;
 		vorp?: number;
+		rapm1?: number;
+		rapm3?: number;
+		rapm5?: number;
 		fgAtRim?: number;
 		fgaAtRim?: number;
 		fgLowPost?: number;

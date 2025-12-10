@@ -27,6 +27,12 @@ const straightThrough = [
 	"fxf",
 	"pm100",
 	"onOff100",
+	"rapm1Off",
+	"rapm1Def",
+	"rapm1",
+	"rapm3Off",
+	"rapm3Def",
+	"rapm3",
 ];
 
 const processStats = (

@@ -1,8 +1,8 @@
 import csv
 
 # Input and output CSV file paths
-input_csv = "lineupData-data.csv"
-output_csv = "transformed_lineup_data.csv"
+input_csv = "bbgm_rapm/lineupData-data.csv"
+output_csv = "bbgm_rapm/transformed_lineup_data.csv"
 
 # New headers
 new_headers = [

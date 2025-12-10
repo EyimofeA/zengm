@@ -12,28 +12,40 @@ const newPhasePlayoffs = async (
 	conditions: Conditions,
 	liveGameSim: boolean = false,
 ): Promise<PhaseReturn> => {
-       await achievement.check("afterRegularSeason", conditions);
+	await achievement.check("afterRegularSeason", conditions);
 
-       if (!local.autoPlayUntil) {
-               const rapm = await computeRapmForSeason(
-                       g.get("season"),
-                       [1, 3, 5],
-                       idb.league,
-               );
-               for (const [pidRaw, vals] of Object.entries(rapm)) {
-                       const pid = parseInt(pidRaw);
-                       const p = await idb.cache.players.get(pid);
-                       if (p) {
-                               p.rapm1 = vals.rapm1;
-                               p.rapm3 = vals.rapm3;
-                               p.rapm5 = vals.rapm5;
-                               await idb.cache.players.put(p);
-                       }
-               }
-       }
+	// Calculate RAPM for all players and save to their current season stats
+	const rapm = await computeRapmForSeason(
+		g.get("season"),
+		[1, 3],
+		idb.league,
+	);
 
-       // In case this was somehow set already
-       local.playingUntilEndOfRound = false;
+	for (const [pidRaw, vals] of Object.entries(rapm)) {
+		const pid = parseInt(pidRaw);
+		const p = await idb.cache.players.get(pid);
+		if (p) {
+			// Find the regular season stats row for the current season
+			const currentSeasonStats = p.stats.find(
+				ps => ps.season === g.get("season") && !ps.playoffs
+			);
+
+			if (currentSeasonStats) {
+				// Add RAPM values to the stats row
+				currentSeasonStats.rapm1Off = vals.rapm1Off;
+				currentSeasonStats.rapm1Def = vals.rapm1Def;
+				currentSeasonStats.rapm1 = vals.rapm1;
+				currentSeasonStats.rapm3Off = vals.rapm3Off;
+				currentSeasonStats.rapm3Def = vals.rapm3Def;
+				currentSeasonStats.rapm3 = vals.rapm3;
+				await idb.cache.players.put(p);
+			}
+		}
+	}
+
+
+	// In case this was somehow set already
+	local.playingUntilEndOfRound = false;
 
 	// Set playoff matchups
 	const { byConf, playIns, series, tidPlayIn, tidPlayoffs } =

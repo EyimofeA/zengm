@@ -63,8 +63,9 @@ export type Store =
 	| "playoffSeries"
 	| "releasedPlayers"
 	| "savedTrades"
-	| "savedTradingBlock"
-	| "schedule"
+        | "savedTradingBlock"
+        | "playerRapm"
+        | "schedule"
 	| "scheduledEvents"
 	| "seasonLeaders"
 	| "teamSeasons"
@@ -98,9 +99,10 @@ export const STORES: Store[] = [
 	"players",
 	"playoffSeries",
 	"releasedPlayers",
-	"savedTrades",
-	"savedTradingBlock",
-	"schedule",
+        "savedTrades",
+        "savedTradingBlock",
+        "playerRapm",
+        "schedule",
 	"scheduledEvents",
 	"seasonLeaders",
 	"teamSeasons",
@@ -278,7 +280,25 @@ class Cache {
 
 	savedTrades: StoreAPI<SavedTrade, SavedTrade, string>;
 
-	savedTradingBlock: StoreAPI<SavedTradingBlock, SavedTradingBlock, number>;
+        savedTradingBlock: StoreAPI<SavedTradingBlock, SavedTradingBlock, number>;
+
+        playerRapm: StoreAPI<
+                {
+                        pid: number;
+                        season: number;
+                        rapm1: number;
+                        rapm3: number;
+                        rapm5: number;
+                },
+                {
+                        pid: number;
+                        season: number;
+                        rapm1: number;
+                        rapm3: number;
+                        rapm5: number;
+                },
+                number
+        >;
 
 	schedule: StoreAPI<ScheduleGameWithoutKey, ScheduleGame, number>;
 
@@ -448,18 +468,25 @@ class Cache {
 				getData: (tx: IDBPTransaction<LeagueDB>) =>
 					tx.objectStore("savedTrades").getAll(),
 			},
-			savedTradingBlock: {
-				pk: "rid",
-				pkType: "number",
-				autoIncrement: false,
-				getData: (tx: IDBPTransaction<LeagueDB>) =>
-					tx.objectStore("savedTradingBlock").getAll(),
-			},
-			schedule: {
-				pk: "gid",
-				pkType: "number",
-				autoIncrement: true,
-				getData: (tx: IDBPTransaction<LeagueDB>) =>
+                        savedTradingBlock: {
+                                pk: "rid",
+                                pkType: "number",
+                                autoIncrement: false,
+                                getData: (tx: IDBPTransaction<LeagueDB>) =>
+                                        tx.objectStore("savedTradingBlock").getAll(),
+                        },
+                        playerRapm: {
+                                pk: "pid",
+                                pkType: "number",
+                                autoIncrement: false,
+                                getData: (tx: IDBPTransaction<LeagueDB>) =>
+                                        tx.objectStore("playerRapm").getAll(),
+                        },
+                        schedule: {
+                                pk: "gid",
+                                pkType: "number",
+                                autoIncrement: true,
+                                getData: (tx: IDBPTransaction<LeagueDB>) =>
 					tx.objectStore("schedule").getAll(),
 			},
 			scheduledEvents: {
@@ -584,9 +611,10 @@ class Cache {
 		this.players = new StoreAPI(this, "players");
 		this.playoffSeries = new StoreAPI(this, "playoffSeries");
 		this.releasedPlayers = new StoreAPI(this, "releasedPlayers");
-		this.savedTrades = new StoreAPI(this, "savedTrades");
-		this.savedTradingBlock = new StoreAPI(this, "savedTradingBlock");
-		this.schedule = new StoreAPI(this, "schedule");
+                this.savedTrades = new StoreAPI(this, "savedTrades");
+                this.savedTradingBlock = new StoreAPI(this, "savedTradingBlock");
+                this.playerRapm = new StoreAPI(this, "playerRapm");
+                this.schedule = new StoreAPI(this, "schedule");
 		this.scheduledEvents = new StoreAPI(this, "scheduledEvents");
 		this.seasonLeaders = new StoreAPI(this, "seasonLeaders");
 		this.teamSeasons = new StoreAPI(this, "teamSeasons");
